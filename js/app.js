@@ -1,31 +1,111 @@
 /* ═══════════════════════════════════════════════════════════════════
-   app.js — Main Application Entry Point
-   Connects Simulation, Canvas Renderer, UI, Presets, and Comparison Mode.
+   app.js — Tactical Game Orchestrator & Controls
+   Connects Simulation, Renderer, UI Dossier, Camera Pan & Zoom,
+   Synthesized Web Audio SFX, and Field Reinforcement Controls.
    ═══════════════════════════════════════════════════════════════════ */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ─── Initialize Core Components ───
     const canvas = document.getElementById('sim-canvas');
     const renderer = new Renderer(canvas);
     const ui = new DashboardUI();
 
-    // Default configuration from UI inputs
+    // ─── Procedural Web Audio Sound Engine (No External Audio Files Needed) ───
+    class SoundEngine {
+        constructor() {
+            this.ctx = null;
+            this.enabled = true;
+        }
+
+        _init() {
+            if (!this.ctx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) this.ctx = new AudioCtx();
+            }
+        }
+
+        playGunshot() {
+            if (!this.enabled) return;
+            this._init();
+            if (!this.ctx) return;
+            const t = this.ctx.currentTime;
+            const bufferSize = this.ctx.sampleRate * 0.12;
+            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.02));
+            }
+            const noise = this.ctx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1400, t);
+            filter.frequency.exponentialRampToValueAtTime(100, t + 0.1);
+            const gain = this.ctx.createGain();
+            gain.gain.setValueAtTime(0.3, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+            noise.start(t);
+        }
+
+        playBite() {
+            if (!this.enabled) return;
+            this._init();
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const t = this.ctx.currentTime;
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(180, t);
+            osc.frequency.exponentialRampToValueAtTime(60, t + 0.2);
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.2);
+        }
+
+        playHeal() {
+            if (!this.enabled) return;
+            this._init();
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const t = this.ctx.currentTime;
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, t); // C5
+            osc.frequency.setValueAtTime(659.25, t + 0.1); // E5
+            gain.gain.setValueAtTime(0.15, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.3);
+        }
+    }
+
+    const sound = new SoundEngine();
+
+    // ─── Input Configuration ───
     function getConfigFromInputs() {
         return {
             survivors: parseInt(document.getElementById('slider-survivors').value, 10),
             zombies: parseInt(document.getElementById('slider-zombies').value, 10),
             police: parseInt(document.getElementById('slider-police').value, 10),
+            swat: parseInt(document.getElementById('slider-swat').value, 10),
+            military: parseInt(document.getElementById('slider-military').value, 10),
             doctors: parseInt(document.getElementById('slider-doctors').value, 10),
             infectionProb: parseFloat(document.getElementById('slider-infection').value),
             zombieSpeed: parseFloat(document.getElementById('slider-zspeed').value),
-            resources: parseInt(document.getElementById('slider-resources').value, 10),
             cureEnabled: document.getElementById('chk-cure').checked,
         };
     }
 
     let sim = new Simulation(getConfigFromInputs(), Date.now() % 100000);
 
-    // Initial render and UI update
+    // Initial render and telemetry sync
     renderer.render(sim);
     ui.updateStats(sim.stats);
     ui.updateTime(sim.getFormattedTime());
@@ -44,14 +124,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastTimestamp = 0;
     let tickAccumulator = 0;
 
-    // ─── Animation Loop ───
+    // ─── Main Animation Loop ───
     function loop(timestamp) {
         if (!lastTimestamp) lastTimestamp = timestamp;
         const delta = Math.min(100, timestamp - lastTimestamp);
         lastTimestamp = timestamp;
 
         if (sim.running && !sim.paused) {
-            // Base tick rate: 60 ticks/sec at 1.0x speed
             const ticksPerSecond = 60 * sim.speed;
             const msPerTick = 1000 / ticksPerSecond;
             tickAccumulator += delta;
@@ -60,16 +139,31 @@ document.addEventListener('DOMContentLoaded', () => {
             let ticksRun = 0;
 
             while (tickAccumulator >= msPerTick && ticksRun < maxTicksPerFrame) {
+                // Check events for audio triggers
+                const prevEventsLen = sim.events.length;
                 sim.step();
+                if (sim.events.length > prevEventsLen) {
+                    const latest = sim.events[0];
+                    if (latest.type === 'good' && latest.msg.includes('eliminated')) {
+                        sound.playGunshot();
+                    } else if (latest.type === 'danger' && latest.msg.includes('infected')) {
+                        sound.playBite();
+                    } else if (latest.type === 'good' && latest.msg.includes('cure')) {
+                        sound.playHeal();
+                    }
+                }
                 tickAccumulator -= msPerTick;
                 ticksRun++;
             }
 
-            // Sync UI updates periodically
-            if (sim.tick % 3 === 0) {
+            // Sync UI periodically
+            if (sim.tick % 4 === 0) {
                 ui.updateStats(sim.stats);
                 ui.updateTime(sim.getFormattedTime());
                 ui.updateEvents(sim.events);
+                if (renderer.selectedEntity) {
+                    ui.updateDossier(renderer.selectedEntity);
+                }
             }
             if (sim.tick % 15 === 0) {
                 ui.updateChart(sim.history);
@@ -84,20 +178,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateStatusOverlay() {
         if (!overlayStatus) return;
         if (!sim.running) {
-            overlayStatus.textContent = 'READY — Configure parameters and click Start';
-            overlayStatus.style.borderColor = 'rgba(74, 222, 128, 0.4)';
+            overlayStatus.textContent = 'DEFCON 5 — Configure tactical quotas and click Start';
         } else if (sim.paused) {
             overlayStatus.textContent = `PAUSED (Tick ${sim.tick} — ${sim.getFormattedTime()})`;
-            overlayStatus.style.borderColor = 'rgba(251, 191, 36, 0.6)';
         } else if (sim.stats.zombies === 0 && sim.tick > 60) {
-            overlayStatus.textContent = 'VICTORY — All zombies eliminated! City secured.';
-            overlayStatus.style.borderColor = 'rgba(59, 130, 246, 0.8)';
+            overlayStatus.textContent = 'VICTORY — Bio-threat eliminated. Urban sector secured!';
         } else if (sim.stats.healthy === 0 && sim.stats.infected === 0) {
-            overlayStatus.textContent = 'EXTINCTION — No survivors left.';
-            overlayStatus.style.borderColor = 'rgba(239, 68, 68, 0.8)';
+            overlayStatus.textContent = 'EXTINCTION — All civilians eliminated or turned.';
         } else {
-            overlayStatus.textContent = `SIMULATING (${sim.speed.toFixed(1)}x) — Time: ${sim.getFormattedTime()} | Living: ${sim.stats.healthy + sim.stats.infected} | Zombies: ${sim.stats.zombies}`;
-            overlayStatus.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+            overlayStatus.textContent = `ENGAGED (${sim.speed.toFixed(1)}x) — Civilians: ${sim.stats.healthy} | Hostiles: ${sim.stats.zombies} | Containment: ${sim.stats.survivalRate}%`;
         }
     }
 
@@ -147,6 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btnStart.disabled = false;
         btnPause.disabled = true;
         btnPause.textContent = '⏸ Pause';
+        renderer.selectedEntity = null;
+        ui.updateDossier(null);
         ui.resetChart();
         ui.updateStats(sim.stats);
         ui.updateTime(sim.getFormattedTime());
@@ -158,18 +249,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─── Speed Slider ───
     sliderSpeed.addEventListener('input', (e) => {
         const val = parseFloat(e.target.value);
-        valSpeed.textContent = val.toFixed(1);
+        valSpeed.textContent = val.toFixed(1) + 'x';
         sim.speed = val;
     });
 
-    // ─── Real-Time Parameter Sliders ───
-    function bindSlider(sliderId, labelId, configKey, isFloat = false) {
+    // ─── Sliders Binding ───
+    function bindSlider(sliderId, labelId, configKey, isFloat = false, suffix = '') {
         const slider = document.getElementById(sliderId);
         const label = document.getElementById(labelId);
         if (!slider || !label) return;
         slider.addEventListener('input', (e) => {
             const val = isFloat ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
-            label.textContent = isFloat ? val.toFixed(2) : val;
+            label.textContent = (isFloat ? val.toFixed(2) : val) + suffix;
             if (sim.config[configKey] !== undefined) {
                 sim.config[configKey] = val;
             }
@@ -179,10 +270,11 @@ document.addEventListener('DOMContentLoaded', () => {
     bindSlider('slider-survivors', 'val-survivors', 'survivors');
     bindSlider('slider-zombies', 'val-zombies', 'zombies');
     bindSlider('slider-police', 'val-police', 'police');
+    bindSlider('slider-swat', 'val-swat', 'swat');
+    bindSlider('slider-military', 'val-military', 'military');
     bindSlider('slider-doctors', 'val-doctors', 'doctors');
-    bindSlider('slider-infection', 'val-infection', 'infectionProb', true);
-    bindSlider('slider-zspeed', 'val-zspeed', 'zombieSpeed', true);
-    bindSlider('slider-resources', 'val-resources', 'resources');
+    bindSlider('slider-infection', 'val-infection', 'infectionProb', true, '%');
+    bindSlider('slider-zspeed', 'val-zspeed', 'zombieSpeed', true, 'x');
 
     const chkCure = document.getElementById('chk-cure');
     if (chkCure) {
@@ -191,30 +283,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ─── Presets ───
+    // ─── Preset Scenarios ───
     const presets = {
         small: {
-            survivors: 30, zombies: 3, police: 2, doctors: 1,
-            infectionProb: 0.25, zombieSpeed: 1.0, resources: 60, cureEnabled: false
+            survivors: 40, zombies: 4, police: 4, swat: 2, military: 2, doctors: 2,
+            infectionProb: 0.25, zombieSpeed: 1.1, cureEnabled: false
         },
         city: {
-            survivors: 120, zombies: 20, police: 8, doctors: 6,
-            infectionProb: 0.45, zombieSpeed: 1.4, resources: 40, cureEnabled: false
+            survivors: 140, zombies: 25, police: 8, swat: 4, military: 4, doctors: 6,
+            infectionProb: 0.45, zombieSpeed: 1.4, cureEnabled: false
         },
         strong: {
-            survivors: 70, zombies: 12, police: 15, doctors: 8,
-            infectionProb: 0.30, zombieSpeed: 1.1, resources: 80, cureEnabled: true
+            survivors: 80, zombies: 15, police: 14, swat: 8, military: 10, doctors: 6,
+            infectionProb: 0.30, zombieSpeed: 1.2, cureEnabled: true
         },
         limited: {
-            survivors: 50, zombies: 10, police: 2, doctors: 1,
-            infectionProb: 0.40, zombieSpeed: 1.3, resources: 15, cureEnabled: false
+            survivors: 50, zombies: 12, police: 2, swat: 0, military: 0, doctors: 1,
+            infectionProb: 0.40, zombieSpeed: 1.3, cureEnabled: false
         }
     };
 
     document.querySelectorAll('.preset-grid .btn-preset').forEach(btn => {
         btn.addEventListener('click', () => {
-            const key = btn.dataset.preset;
-            const p = presets[key];
+            const p = presets[btn.dataset.preset];
             if (!p) return;
 
             document.getElementById('slider-survivors').value = p.survivors;
@@ -223,14 +314,16 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('val-zombies').textContent = p.zombies;
             document.getElementById('slider-police').value = p.police;
             document.getElementById('val-police').textContent = p.police;
+            document.getElementById('slider-swat').value = p.swat;
+            document.getElementById('val-swat').textContent = p.swat;
+            document.getElementById('slider-military').value = p.military;
+            document.getElementById('val-military').textContent = p.military;
             document.getElementById('slider-doctors').value = p.doctors;
             document.getElementById('val-doctors').textContent = p.doctors;
             document.getElementById('slider-infection').value = p.infectionProb;
-            document.getElementById('val-infection').textContent = p.infectionProb.toFixed(2);
+            document.getElementById('val-infection').textContent = Math.round(p.infectionProb * 100) + '%';
             document.getElementById('slider-zspeed').value = p.zombieSpeed;
-            document.getElementById('val-zspeed').textContent = p.zombieSpeed.toFixed(1);
-            document.getElementById('slider-resources').value = p.resources;
-            document.getElementById('val-resources').textContent = p.resources;
+            document.getElementById('val-zspeed').textContent = p.zombieSpeed.toFixed(1) + 'x';
             document.getElementById('chk-cure').checked = p.cureEnabled;
 
             sim.reset(p);
@@ -238,6 +331,8 @@ document.addEventListener('DOMContentLoaded', () => {
             btnStart.disabled = false;
             btnPause.disabled = true;
             btnPause.textContent = '⏸ Pause';
+            renderer.selectedEntity = null;
+            ui.updateDossier(null);
             ui.resetChart();
             ui.updateStats(sim.stats);
             ui.updateTime(sim.getFormattedTime());
@@ -247,54 +342,149 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ─── Live Add Buttons ───
-    document.getElementById('btn-add-survivor').addEventListener('click', () => {
-        sim.addSurvivor();
-        ui.updateStats(sim.stats);
-        ui.updateEvents(sim.events);
+    // ─── Field Deployment Buttons ───
+    document.getElementById('btn-add-survivor').addEventListener('click', () => { sim.addSurvivor(); renderer.render(sim); });
+    document.getElementById('btn-add-zombie').addEventListener('click', () => { sim.addZombie(); renderer.render(sim); });
+    document.getElementById('btn-add-police').addEventListener('click', () => { sim.addPolice(); renderer.render(sim); });
+    document.getElementById('btn-add-swat').addEventListener('click', () => { sim.addSWAT(); renderer.render(sim); });
+    document.getElementById('btn-add-military').addEventListener('click', () => { sim.addMilitary(); renderer.render(sim); });
+    document.getElementById('btn-add-police-car').addEventListener('click', () => { sim.addPoliceCar(); renderer.render(sim); });
+    document.getElementById('btn-add-ambulance').addEventListener('click', () => { sim.addAmbulance(); renderer.render(sim); });
+    document.getElementById('btn-add-safezone').addEventListener('click', () => { sim.addSafeZone(); renderer.render(sim); });
+
+    // ─── Top Bar Controls (Night Vision, Audio, Modals) ───
+    const btnNight = document.getElementById('btn-night');
+    btnNight.addEventListener('click', () => {
+        renderer.nightMode = !renderer.nightMode;
+        btnNight.classList.toggle('active', renderer.nightMode);
         renderer.render(sim);
     });
 
-    document.getElementById('btn-add-zombie').addEventListener('click', () => {
-        sim.addZombie();
-        ui.updateStats(sim.stats);
-        ui.updateEvents(sim.events);
-        renderer.render(sim);
+    const btnSound = document.getElementById('btn-sound');
+    btnSound.addEventListener('click', () => {
+        sound.enabled = !sound.enabled;
+        btnSound.textContent = sound.enabled ? '🔊 SFX: ON' : '🔇 SFX: OFF';
+        btnSound.classList.toggle('active', sound.enabled);
     });
 
-    document.getElementById('btn-add-safezone').addEventListener('click', () => {
-        sim.addSafeZone();
-        ui.updateEvents(sim.events);
-        renderer.render(sim);
+    // ─── Camera Pan & Zoom Controls ───
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        dragStartX = e.clientX - renderer.targetPanX;
+        dragStartY = e.clientY - renderer.targetPanY;
     });
 
-    // ─── Canvas Click: Interactive Spawning ───
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        renderer.followSelected = false;
+        document.getElementById('btn-follow-toggle').classList.remove('active');
+        renderer.targetPanX = e.clientX - dragStartX;
+        renderer.targetPanY = e.clientY - dragStartY;
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
+
+    // Smooth Mouse Wheel Zoom
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+        const newZoom = clamp(renderer.zoom * zoomFactor, 0.4, 2.5);
+
+        // Zoom relative to mouse cursor
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        renderer.targetPanX = mouseX - (mouseX - renderer.targetPanX) * (newZoom / renderer.zoom);
+        renderer.targetPanY = mouseY - (mouseY - renderer.targetPanY) * (newZoom / renderer.zoom);
+        renderer.zoom = newZoom;
+    }, { passive: false });
+
+    // Floating Camera Buttons
+    document.getElementById('btn-zoom-in').addEventListener('click', () => {
+        renderer.zoom = clamp(renderer.zoom * 1.25, 0.4, 2.5);
+    });
+
+    document.getElementById('btn-zoom-out').addEventListener('click', () => {
+        renderer.zoom = clamp(renderer.zoom * 0.8, 0.4, 2.5);
+    });
+
+    document.getElementById('btn-zoom-reset').addEventListener('click', () => {
+        renderer.zoom = 1.0;
+        renderer.targetPanX = 0;
+        renderer.targetPanY = 0;
+        renderer.followSelected = false;
+        document.getElementById('btn-follow-toggle').classList.remove('active');
+    });
+
+    const btnFollow = document.getElementById('btn-follow-toggle');
+    btnFollow.addEventListener('click', () => {
+        if (renderer.selectedEntity) {
+            renderer.followSelected = !renderer.followSelected;
+            btnFollow.classList.toggle('active', renderer.followSelected);
+        }
+    });
+
+    // ─── Tactical Entity Selection Click Handler ───
     canvas.addEventListener('click', (e) => {
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const clickX = (e.clientX - rect.left) * scaleX;
-        const clickY = (e.clientY - rect.top) * scaleY;
+        const worldX = (e.clientX - rect.left - renderer.panX) / renderer.zoom;
+        const worldY = (e.clientY - rect.top - renderer.panY) / renderer.zoom;
 
-        if (e.shiftKey) {
-            // Shift-click spawns Zombie
-            const z = new Zombie(clickX, clickY, createRNG(sim.seed + sim.tick + Math.random() * 9999), sim.config.zombieSpeed);
-            sim.agents.push(z);
-            sim._addEvent('danger', `Zombie spawned manually at (${Math.round(clickX)}, ${Math.round(clickY)})`);
-        } else {
-            // Regular click spawns Survivor
-            const s = new Survivor(clickX, clickY, createRNG(sim.seed + sim.tick + Math.random() * 9999));
-            sim.agents.push(s);
-            sim.totalInitialSurvivors++;
-            sim._addEvent('info', `Survivor placed at (${Math.round(clickX)}, ${Math.round(clickY)})`);
+        // Find nearest agent or vehicle within 25px
+        let selected = null;
+        let minDist = 26;
+
+        for (const a of sim.agents) {
+            const d = Math.hypot(a.x - worldX, a.y - worldY);
+            if (d < minDist) {
+                minDist = d;
+                selected = a;
+            }
         }
-        sim._calcStats();
-        ui.updateStats(sim.stats);
-        ui.updateEvents(sim.events);
+
+        renderer.selectedEntity = selected;
+        ui.updateDossier(selected);
         renderer.render(sim);
     });
 
-    // ─── Modal Handling: Theory and Comparison ───
+    document.getElementById('dos-close').addEventListener('click', () => {
+        renderer.selectedEntity = null;
+        ui.updateDossier(null);
+        renderer.followSelected = false;
+        btnFollow.classList.remove('active');
+        renderer.render(sim);
+    });
+
+    // ─── Keyboard Hotkeys ───
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            btnPause.click();
+        } else if (e.code === 'KeyN') {
+            btnNight.click();
+        } else if (e.code === 'KeyF') {
+            btnFollow.click();
+        } else if (e.code === 'KeyR' && e.ctrlKey) {
+            // let normal refresh happen
+        } else if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+            renderer.targetPanY += 40;
+        } else if (e.code === 'KeyS' || e.code === 'ArrowDown') {
+            renderer.targetPanY -= 40;
+        } else if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+            renderer.targetPanX += 40;
+        } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+            renderer.targetPanX -= 40;
+        }
+    });
+
+    // ─── Modals Handling (Theory & Comparison) ───
     const modalInfo = document.getElementById('modal-info');
     const modalCompare = document.getElementById('modal-compare');
     const btnInfo = document.getElementById('btn-info');
@@ -313,61 +503,57 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === modalCompare) modalCompare.classList.add('hidden');
     });
 
-    // ─── Comparison Mode Experiments ───
+    // Comparison Mode Experiments
     const comparePresets = {
         police: {
-            titleA: 'Low Police Presence (2 Officers)',
-            titleB: 'High Police Presence (14 Officers)',
-            cfgA: { survivors: 80, zombies: 10, police: 2, doctors: 2, infectionProb: 0.35, zombieSpeed: 1.2, resources: 50, cureEnabled: false },
-            cfgB: { survivors: 80, zombies: 10, police: 14, doctors: 2, infectionProb: 0.35, zombieSpeed: 1.2, resources: 50, cureEnabled: false }
+            titleA: 'Minimal Police (2 Officers)',
+            titleB: 'High Tactical Density (14 Police & SWAT)',
+            cfgA: { survivors: 80, zombies: 12, police: 2, swat: 0, military: 0, infectionProb: 0.35, zombieSpeed: 1.2 },
+            cfgB: { survivors: 80, zombies: 12, police: 10, swat: 4, military: 4, infectionProb: 0.35, zombieSpeed: 1.2 }
         },
         safezones: {
-            titleA: 'Scarce Safe Zones / Supplies',
-            titleB: 'Fortified City (Safe Zones & Meds)',
-            cfgA: { survivors: 80, zombies: 10, police: 4, doctors: 2, infectionProb: 0.35, zombieSpeed: 1.2, resources: 10, cureEnabled: false },
-            cfgB: { survivors: 80, zombies: 10, police: 4, doctors: 6, infectionProb: 0.35, zombieSpeed: 1.2, resources: 90, cureEnabled: true }
+            titleA: 'Open Metropolis (No Safe Sanctuaries)',
+            titleB: 'Fortified Sanctuaries with Medical Bay',
+            cfgA: { survivors: 80, zombies: 12, police: 4, swat: 2, infectionProb: 0.35, zombieSpeed: 1.2 },
+            cfgB: { survivors: 80, zombies: 12, police: 4, swat: 2, doctors: 6, infectionProb: 0.35, zombieSpeed: 1.2 }
         },
         infection: {
-            titleA: 'Low Virulence (15% Infection Prob)',
-            titleB: 'Hyper-Virulent Strain (75% Infection Prob)',
-            cfgA: { survivors: 80, zombies: 8, police: 6, doctors: 4, infectionProb: 0.15, zombieSpeed: 1.1, resources: 50, cureEnabled: false },
-            cfgB: { survivors: 80, zombies: 8, police: 6, doctors: 4, infectionProb: 0.75, zombieSpeed: 1.4, resources: 50, cureEnabled: false }
+            titleA: 'Low Virulence Strain (15% Inoculation)',
+            titleB: 'Hyper-Virulent Mutation (75% Inoculation)',
+            cfgA: { survivors: 80, zombies: 10, police: 6, swat: 3, infectionProb: 0.15, zombieSpeed: 1.1 },
+            cfgB: { survivors: 80, zombies: 10, police: 6, swat: 3, infectionProb: 0.75, zombieSpeed: 1.4 }
         },
         cure: {
-            titleA: 'Cure System Disabled',
-            titleB: 'Active Medical Cure Research',
-            cfgA: { survivors: 80, zombies: 12, police: 6, doctors: 6, infectionProb: 0.40, zombieSpeed: 1.2, resources: 50, cureEnabled: false },
-            cfgB: { survivors: 80, zombies: 12, police: 6, doctors: 6, infectionProb: 0.40, zombieSpeed: 1.2, resources: 75, cureEnabled: true }
+            titleA: 'No Medical Cure Developed',
+            titleB: 'Active Vaccine Deployment',
+            cfgA: { survivors: 80, zombies: 12, police: 6, doctors: 4, infectionProb: 0.40, cureEnabled: false },
+            cfgB: { survivors: 80, zombies: 12, police: 6, doctors: 6, infectionProb: 0.40, cureEnabled: true }
         }
     };
 
     document.querySelectorAll('.compare-presets .btn-preset').forEach(btn => {
         btn.addEventListener('click', () => {
-            const expKey = btn.dataset.compare;
-            const exp = comparePresets[expKey];
+            const exp = comparePresets[btn.dataset.compare];
             if (!exp) return;
 
             const statusEl = document.getElementById('compare-status');
-            statusEl.textContent = 'Running parallel ABM simulations (1,500 ticks each)...';
+            statusEl.textContent = 'Executing parallel ABM simulations (1,500 ticks each)...';
 
             setTimeout(() => {
-                const seedA = 10101;
-                const seedB = 10101; // identical seed for clean comparative isolation
-                const resultA = runHeadless(exp.cfgA, seedA, 1500);
-                const resultB = runHeadless(exp.cfgB, seedB, 1500);
+                const seed = 10101;
+                const resultA = runHeadless(exp.cfgA, seed, 1500);
+                const resultB = runHeadless(exp.cfgB, seed, 1500);
 
-                statusEl.textContent = 'Simulations complete. Showing results side by side:';
+                statusEl.textContent = 'Simulations complete. Visualizing comparative metrics:';
                 ui.showCompareResults(exp.titleA, resultA.stats, exp.titleB, resultB.stats, resultA.history, resultB.history);
-            }, 50);
+            }, 60);
         });
     });
 
-    // Handle Window Resize
     window.addEventListener('resize', () => {
         renderer._resize();
         renderer.render(sim);
     });
 
-    // Start rendering loop
     animationId = requestAnimationFrame(loop);
 });

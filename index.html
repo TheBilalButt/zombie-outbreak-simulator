@@ -3,31 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zombie Outbreak Simulator — Agent-Based Modeling</title>
-    <meta name="description" content="Real-time Agent-Based Modeling zombie outbreak simulation with interactive controls, live dashboard, and experiment comparison.">
+    <title>Zombie Outbreak Simulator — Urban Tactical ABM Strategy</title>
+    <meta name="description" content="Professional Agent-Based Modeling zombie outbreak simulation featuring anatomical characters, emergency vehicles, dynamic lighting, and urban tactical strategy.">
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
-    <!-- TOP HEADER BAR -->
+    <!-- TOP TACTICAL COMMAND BAR -->
     <header id="app-header">
         <div class="header-left">
             <span class="header-icon">☣</span>
-            <h1>Zombie Outbreak Simulator</h1>
-            <span class="header-badge">Agent-Based Model</span>
+            <div>
+                <h1>ZOMBIE OUTBREAK SIMULATOR</h1>
+                <span class="header-sub">Urban Tactical Complex Adaptive System &bull; ABM Engine</span>
+            </div>
+        </div>
+        <div class="header-center">
+            <div id="quick-status-badge" class="status-badge ready">DEFCON 5: MONITORING</div>
         </div>
         <div class="header-right">
-            <span class="header-credit">Bilal Butt — ABM Course</span>
-            <button id="btn-info" class="header-btn" title="ABM Theory">📖 Theory</button>
+            <button id="btn-night" class="header-btn active" title="Toggle Night Vision / Survival Shroud">🌙 Night Ops</button>
+            <button id="btn-sound" class="header-btn" title="Toggle Tactical Audio Effects">🔊 SFX: ON</button>
+            <button id="btn-info" class="header-btn" title="ABM Course Theory">📖 Theory</button>
             <button id="btn-compare" class="header-btn" title="Experiment Comparison">⚗️ Compare</button>
         </div>
     </header>
 
     <main id="app-main">
-        <!-- LEFT PANEL: Controls -->
+        <!-- LEFT PANEL: Controls & Settings -->
         <aside id="panel-left">
+            <!-- SIMULATION CONTROLS -->
             <section class="panel-section">
-                <h3 class="section-title">⚙ Simulation Controls</h3>
+                <h3 class="section-title">⚙ COMMAND & CONTROL</h3>
                 <div class="control-row">
                     <button id="btn-start" class="btn btn-green">▶ Start</button>
                     <button id="btn-pause" class="btn btn-amber" disabled>⏸ Pause</button>
@@ -35,153 +42,227 @@
                     <button id="btn-reset" class="btn btn-red">↺ Reset</button>
                 </div>
                 <div class="slider-group">
-                    <label>Speed: <span id="val-speed">1.0</span>x</label>
+                    <div class="slider-header">
+                        <label>Simulation Speed</label>
+                        <span id="val-speed" class="badge">1.0x</span>
+                    </div>
                     <input type="range" id="slider-speed" min="0.1" max="5" step="0.1" value="1">
                 </div>
             </section>
 
+            <!-- PRESET SCENARIOS -->
             <section class="panel-section">
-                <h3 class="section-title">📋 Preset Scenarios</h3>
+                <h3 class="section-title">📋 SCENARIO PRESETS</h3>
                 <div class="preset-grid">
-                    <button class="btn btn-preset" data-preset="small">🦠 Small Outbreak</button>
-                    <button class="btn btn-preset" data-preset="city">🏙️ City Under Attack</button>
-                    <button class="btn btn-preset" data-preset="strong">🛡️ Strong Response</button>
-                    <button class="btn btn-preset" data-preset="limited">📦 Limited Resources</button>
+                    <button class="btn btn-preset" data-preset="small">🦠 Outbreak Zero</button>
+                    <button class="btn btn-preset" data-preset="city">🏙️ Metro Under Siege</button>
+                    <button class="btn btn-preset" data-preset="strong">🛡️ SWAT & Military Lockdown</button>
+                    <button class="btn btn-preset" data-preset="limited">📦 Resource Starvation</button>
                 </div>
             </section>
 
+            <!-- POPULATION SETTINGS -->
             <section class="panel-section">
-                <h3 class="section-title">👥 Population Settings</h3>
+                <h3 class="section-title">👥 POPULATION QUOTAS</h3>
                 <div class="slider-group">
-                    <label>Survivors: <span id="val-survivors">60</span></label>
-                    <input type="range" id="slider-survivors" min="5" max="200" step="5" value="60">
+                    <div class="slider-header"><label>Civilians (Survivors)</label><span id="val-survivors" class="badge">60</span></div>
+                    <input type="range" id="slider-survivors" min="10" max="250" step="5" value="60">
                 </div>
                 <div class="slider-group">
-                    <label>Zombies: <span id="val-zombies">8</span></label>
-                    <input type="range" id="slider-zombies" min="1" max="80" step="1" value="8">
+                    <div class="slider-header"><label>Zombies (Infected)</label><span id="val-zombies" class="badge">10</span></div>
+                    <input type="range" id="slider-zombies" min="1" max="100" step="1" value="10">
                 </div>
                 <div class="slider-group">
-                    <label>Police: <span id="val-police">6</span></label>
+                    <div class="slider-header"><label>Police Officers</label><span id="val-police" class="badge">6</span></div>
                     <input type="range" id="slider-police" min="0" max="30" step="1" value="6">
                 </div>
                 <div class="slider-group">
-                    <label>Doctors: <span id="val-doctors">4</span></label>
+                    <div class="slider-header"><label>SWAT Operators</label><span id="val-swat" class="badge">3</span></div>
+                    <input type="range" id="slider-swat" min="0" max="20" step="1" value="3">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-header"><label>Military Soldiers</label><span id="val-military" class="badge">4</span></div>
+                    <input type="range" id="slider-military" min="0" max="25" step="1" value="4">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-header"><label>Doctors & Paramedics</label><span id="val-doctors" class="badge">4</span></div>
                     <input type="range" id="slider-doctors" min="0" max="20" step="1" value="4">
                 </div>
             </section>
 
+            <!-- PARAMETERS -->
             <section class="panel-section">
-                <h3 class="section-title">🧬 Parameters</h3>
+                <h3 class="section-title">🧬 VIRAL & URBAN PARAMETERS</h3>
                 <div class="slider-group">
-                    <label>Infection Prob: <span id="val-infection">0.35</span></label>
+                    <div class="slider-header"><label>Transmission Probability</label><span id="val-infection" class="badge">35%</span></div>
                     <input type="range" id="slider-infection" min="0.05" max="1.0" step="0.05" value="0.35">
                 </div>
                 <div class="slider-group">
-                    <label>Zombie Speed: <span id="val-zspeed">1.2</span></label>
-                    <input type="range" id="slider-zspeed" min="0.3" max="3.0" step="0.1" value="1.2">
-                </div>
-                <div class="slider-group">
-                    <label>Resources: <span id="val-resources">50</span></label>
-                    <input type="range" id="slider-resources" min="0" max="100" step="5" value="50">
+                    <div class="slider-header"><label>Zombie Sprint Velocity</label><span id="val-zspeed" class="badge">1.2x</span></div>
+                    <input type="range" id="slider-zspeed" min="0.5" max="3.0" step="0.1" value="1.2">
                 </div>
                 <div class="checkbox-group">
-                    <label><input type="checkbox" id="chk-cure"> Enable Cure System</label>
+                    <label><input type="checkbox" id="chk-cure"> Experimental Vaccine Available</label>
                 </div>
             </section>
 
+            <!-- LIVE DEPLOYMENT CONTROLS -->
             <section class="panel-section">
-                <h3 class="section-title">➕ Add During Simulation</h3>
-                <div class="control-row">
-                    <button id="btn-add-survivor" class="btn btn-sm btn-green">+ Survivor</button>
+                <h3 class="section-title">🚨 FIELD REINFORCEMENTS</h3>
+                <div class="deploy-grid">
+                    <button id="btn-add-survivor" class="btn btn-sm btn-green">+ Civilian</button>
                     <button id="btn-add-zombie" class="btn btn-sm btn-red">+ Zombie</button>
-                    <button id="btn-add-safezone" class="btn btn-sm btn-blue">+ Safe Zone</button>
+                    <button id="btn-add-police" class="btn btn-sm btn-blue">+ Police</button>
+                    <button id="btn-add-swat" class="btn btn-sm btn-slate">+ SWAT</button>
+                    <button id="btn-add-military" class="btn btn-sm btn-olive">+ Military</button>
+                    <button id="btn-add-police-car" class="btn btn-sm btn-indigo">+ Cruiser</button>
+                    <button id="btn-add-ambulance" class="btn btn-sm btn-cyan">+ Ambulance</button>
+                    <button id="btn-add-safezone" class="btn btn-sm btn-emerald">+ Sanctuary</button>
                 </div>
             </section>
 
+            <!-- MAP LEGEND -->
             <section class="panel-section">
-                <h3 class="section-title">🗺 Map Legend</h3>
+                <h3 class="section-title">🗺 TACTICAL RECONNAISSANCE</h3>
                 <div class="legend-grid">
-                    <div class="legend-item"><span class="dot" style="background:#4ade80"></span> Healthy</div>
-                    <div class="legend-item"><span class="dot" style="background:#fbbf24"></span> Infected</div>
-                    <div class="legend-item"><span class="dot" style="background:#6b7280"></span> Dead</div>
-                    <div class="legend-item"><span class="dot" style="background:#ef4444"></span> Zombie</div>
-                    <div class="legend-item"><span class="dot" style="background:#3b82f6"></span> Police</div>
-                    <div class="legend-item"><span class="dot" style="background:#f472b6"></span> Doctor</div>
-                    <div class="legend-item"><span class="swatch" style="background:#065f46"></span> Safe Zone</div>
-                    <div class="legend-item"><span class="swatch" style="background:#1e3a5f"></span> Hospital</div>
-                    <div class="legend-item"><span class="swatch" style="background:#334155"></span> Building</div>
-                    <div class="legend-item"><span class="swatch" style="background:#14532d"></span> Park</div>
+                    <div class="legend-item"><span class="badge-dot" style="background:#3b82f6"></span> Civilian Survivor</div>
+                    <div class="legend-item"><span class="badge-dot" style="background:#fbbf24"></span> Infected Civilian</div>
+                    <div class="legend-item"><span class="badge-dot" style="background:#ef4444"></span> Hostile Zombie</div>
+                    <div class="legend-item"><span class="badge-dot" style="background:#2563eb"></span> Police Officer</div>
+                    <div class="legend-item"><span class="badge-dot" style="background:#18181b"></span> SWAT Operator</div>
+                    <div class="legend-item"><span class="badge-dot" style="background:#4d7c0f"></span> Military Guard</div>
+                    <div class="legend-item"><span class="badge-dot" style="background:#0284c7"></span> Doctor / Paramedic</div>
+                    <div class="legend-item"><span class="badge-dot" style="background:#ea580c"></span> Firefighter</div>
+                    <div class="legend-item"><span class="badge-box" style="background:#1e3a8a"></span> Police Cruiser</div>
+                    <div class="legend-item"><span class="badge-box" style="background:#ea580c"></span> Ambulance</div>
+                    <div class="legend-item"><span class="badge-box" style="background:#065f46"></span> Fortified Sanctuary</div>
+                    <div class="legend-item"><span class="badge-box" style="background:#1e2d42"></span> Hospital Helipad</div>
                 </div>
             </section>
         </aside>
 
-        <!-- CENTER: Simulation Canvas -->
+        <!-- CENTER: Simulation Canvas & Tactical HUD -->
         <div id="canvas-container">
             <canvas id="sim-canvas"></canvas>
+
+            <!-- CAMERA HUD CONTROLS -->
+            <div id="camera-hud">
+                <button id="btn-zoom-in" title="Zoom In">+</button>
+                <button id="btn-zoom-out" title="Zoom Out">&minus;</button>
+                <button id="btn-zoom-reset" title="Reset View (100%)">1:1</button>
+                <button id="btn-follow-toggle" title="Lock Camera onto Selected Agent">🎯 Track</button>
+            </div>
+
+            <!-- TACTICAL INSPECTION DOSSIER (OPENS ON SELECTION) -->
+            <div id="inspection-dossier" class="dossier-panel hidden">
+                <div class="dossier-header">
+                    <div class="dossier-avatar" id="dos-avatar">👤</div>
+                    <div class="dossier-title-box">
+                        <h4 id="dos-name">Officer Marcus Vance</h4>
+                        <span id="dos-role" class="dossier-badge police">METRO POLICE</span>
+                    </div>
+                    <button class="dossier-close" id="dos-close">&times;</button>
+                </div>
+                <div class="dossier-body">
+                    <div class="dos-row">
+                        <span class="dos-label">Health</span>
+                        <div class="dos-health-bar">
+                            <div id="dos-hp-bar" class="dos-hp-fill" style="width: 100%;"></div>
+                        </div>
+                        <span id="dos-hp-text" class="dos-val">100/100</span>
+                    </div>
+                    <div class="dos-row">
+                        <span class="dos-label">Tactical State</span>
+                        <span id="dos-status" class="dos-val highlight">PATROLLING</span>
+                    </div>
+                    <div class="dos-row">
+                        <span class="dos-label">Current AI Objective</span>
+                        <span id="dos-goal" class="dos-val">Holding defensive perimeter</span>
+                    </div>
+                    <div class="dos-row">
+                        <span class="dos-label">Loadout & Gear</span>
+                        <span id="dos-gear" class="dos-val">9mm Service Sidearm (15/15)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OVERLAY STATUS BANNER -->
             <div id="canvas-overlay">
-                <span id="overlay-status">READY — Configure settings and press Start</span>
+                <span id="overlay-status">TACTICAL SYSTEM READY — Select parameters and click Start</span>
             </div>
         </div>
 
-        <!-- RIGHT PANEL: Dashboard -->
+        <!-- RIGHT PANEL: Live Telemetry & Mission Analytics -->
         <aside id="panel-right">
             <section class="panel-section">
-                <h3 class="section-title">📊 Live Dashboard</h3>
+                <h3 class="section-title">📊 POPULATION TELEMETRY</h3>
                 <div class="stats-grid">
                     <div class="stat-card stat-green">
                         <div class="stat-value" id="stat-healthy">0</div>
-                        <div class="stat-label">Healthy</div>
+                        <div class="stat-label">Civilians Healthy</div>
                     </div>
                     <div class="stat-card stat-amber">
                         <div class="stat-value" id="stat-infected">0</div>
-                        <div class="stat-label">Infected</div>
-                    </div>
-                    <div class="stat-card stat-gray">
-                        <div class="stat-value" id="stat-dead">0</div>
-                        <div class="stat-label">Dead</div>
+                        <div class="stat-label">Infected Hosts</div>
                     </div>
                     <div class="stat-card stat-red">
                         <div class="stat-value" id="stat-zombies">0</div>
-                        <div class="stat-label">Zombies</div>
+                        <div class="stat-label">Active Zombies</div>
+                    </div>
+                    <div class="stat-card stat-gray">
+                        <div class="stat-value" id="stat-dead">0</div>
+                        <div class="stat-label">Casualties (K.I.A.)</div>
                     </div>
                     <div class="stat-card stat-blue">
                         <div class="stat-value" id="stat-police">0</div>
-                        <div class="stat-label">Police</div>
+                        <div class="stat-label">Police Officers</div>
                     </div>
-                    <div class="stat-card stat-pink">
-                        <div class="stat-value" id="stat-doctors">0</div>
-                        <div class="stat-label">Doctors</div>
+                    <div class="stat-card stat-slate">
+                        <div class="stat-value" id="stat-swat">0</div>
+                        <div class="stat-label">SWAT Operators</div>
+                    </div>
+                    <div class="stat-card stat-olive">
+                        <div class="stat-value" id="stat-military">0</div>
+                        <div class="stat-label">Military Force</div>
+                    </div>
+                    <div class="stat-card stat-cyan">
+                        <div class="stat-value" id="stat-rescued">0</div>
+                        <div class="stat-label">Rescued to Sanctuary</div>
                     </div>
                 </div>
-                <div class="stat-bar-group">
-                    <div class="stat-bar-row">
-                        <span class="stat-bar-label">Infection Rate</span>
-                        <span class="stat-bar-val" id="stat-infrate">0%</span>
+
+                <!-- PROGRESS BARS -->
+                <div class="progress-wrap">
+                    <div class="progress-label">
+                        <span>Viral Contagion Rate</span>
+                        <span id="stat-infrate">0%</span>
                     </div>
-                    <div class="stat-bar-track"><div class="stat-bar-fill bar-red" id="bar-infrate" style="width:0%"></div></div>
-                    <div class="stat-bar-row">
-                        <span class="stat-bar-label">Survival Rate</span>
-                        <span class="stat-bar-val" id="stat-survrate">100%</span>
-                    </div>
-                    <div class="stat-bar-track"><div class="stat-bar-fill bar-green" id="bar-survrate" style="width:100%"></div></div>
+                    <div class="progress-track"><div class="progress-fill fill-red" id="bar-infrate" style="width:0%"></div></div>
                 </div>
-                <div class="stat-inline">
-                    <div>⏱ Time: <strong id="stat-time">0:00</strong></div>
-                    <div>🏥 Rescued: <strong id="stat-rescued">0</strong></div>
-                    <div>💊 Med Supplies: <strong id="stat-meds">50</strong></div>
-                    <div>🔫 Ammo Pool: <strong id="stat-ammo">100</strong></div>
+
+                <div class="progress-wrap">
+                    <div class="progress-label">
+                        <span>Civilian Survival Index</span>
+                        <span id="stat-survrate">100%</span>
+                    </div>
+                    <div class="progress-track"><div class="progress-fill fill-green" id="bar-survrate" style="width:100%"></div></div>
                 </div>
             </section>
 
+            <!-- LIVE CHART -->
             <section class="panel-section">
-                <h3 class="section-title">📈 Population Over Time</h3>
-                <div class="chart-wrap">
+                <h3 class="section-title">📈 REAL-TIME EPIDEMIC CURVE</h3>
+                <div class="chart-container">
                     <canvas id="chart-population"></canvas>
                 </div>
             </section>
 
+            <!-- TACTICAL INCIDENT LOG -->
             <section class="panel-section">
-                <h3 class="section-title">📜 Event Timeline</h3>
+                <div class="section-header-row">
+                    <h3 class="section-title">📻 911 EMERGENCY DISPATCH LOG</h3>
+                    <span id="stat-time" class="badge">00:00</span>
+                </div>
                 <div id="event-log" class="event-log"></div>
             </section>
         </aside>
@@ -189,72 +270,43 @@
 
     <!-- ABM THEORY MODAL -->
     <div id="modal-info" class="modal hidden">
-        <div class="modal-content modal-wide">
+        <div class="modal-content">
             <button class="modal-close" id="close-info">&times;</button>
-            <h2>📖 Agent-Based Modeling Theory</h2>
-            <div class="theory-content">
+            <h2>📖 Agent-Based Modeling: Theoretical Formulation</h2>
+            <div class="theory-body">
                 <div class="theory-section">
-                    <h3>1. What Are Agents?</h3>
-                    <p>An <strong>agent</strong> is an autonomous entity with its own properties (health, speed, position) and behavioral rules. Each agent perceives its local environment, makes independent decisions, and acts accordingly. In this simulation:</p>
+                    <h3>1. Complex Adaptive Systems Paradigm</h3>
+                    <p>This simulation applies decentralized <strong>Agent-Based Modeling (ABM)</strong> to simulate epidemiological dynamics within a spatially heterogeneous urban grid. Macro-level patterns (epidemic curves, safe havens, quarantine collapses) emerge purely from localized agent decision trees.</p>
+                </div>
+                <div class="theory-section">
+                    <h3>2. Heterogeneous Agent Micro-Rules</h3>
                     <ul>
-                        <li><strong>Survivors</strong> — Have health, stamina, fear level, infection status. They seek resources, flee zombies, navigate to safe zones.</li>
-                        <li><strong>Zombies</strong> — Pursue nearby survivors using detection radius. Chase and attempt infection on contact.</li>
-                        <li><strong>Police</strong> — Patrol areas, detect threats, engage zombies with limited ammunition.</li>
-                        <li><strong>Doctors</strong> — Move between injured survivors and hospitals. Provide medical aid with limited supplies.</li>
+                        <li><strong>Civilian Survivor:</strong> Repulsive vector calculation away from zombies; attraction to hospitals when infected; foraging at supply depots; evacuation to fortified sanctuaries.</li>
+                        <li><strong>Zombie Hostile:</strong> Sensory detection radius; pursuit vector towards nearest human; probabilistic viral inoculation upon contact.</li>
+                        <li><strong>Metro Police:</strong> Area patrol; response to 911 calls; ballistic engagements maintaining tactical distance; tactical retreats when ammunition depletes.</li>
+                        <li><strong>SWAT & Military:</strong> Ballistic riot shield coverage; high-rate-of-fire suppression; checkpoint perimeter enforcement.</li>
+                        <li><strong>Paramedic / Doctor:</strong> Triage algorithms; hospital restocking; administration of experimental vaccines.</li>
                     </ul>
                 </div>
                 <div class="theory-section">
-                    <h3>2. Environment & Spatial Layout</h3>
-                    <p>The simulation world is a 2D city grid containing buildings (impassable), roads, parks, hospitals, police stations, supply depots, and safe zones. Agents navigate around obstacles and interact with the environment — safe zones reduce infection risk, hospitals enable healing, and supply locations provide resources.</p>
-                </div>
-                <div class="theory-section">
-                    <h3>3. Behavioral Rules</h3>
-                    <ul>
-                        <li><strong>Survivor:</strong> IF zombie nearby → flee. IF health low → seek hospital. IF supplies needed → seek depot. IF safe zone nearby → move toward it. ELSE → wander.</li>
-                        <li><strong>Zombie:</strong> IF survivor in detection range → chase. IF contact → attempt infection (probability). ELSE → random wander.</li>
-                        <li><strong>Police:</strong> IF zombie in range AND ammo > 0 → engage. IF survivor in danger → protect. ELSE → patrol.</li>
-                        <li><strong>Doctor:</strong> IF injured survivor nearby → heal. IF infected AND cure enabled → cure. ELSE → move toward hospital.</li>
-                    </ul>
-                </div>
-                <div class="theory-section">
-                    <h3>4. Agent-to-Agent & Agent-to-Environment Interactions</h3>
-                    <p><strong>Agent-to-Agent:</strong> Zombie→Survivor contact triggers probabilistic infection. Police→Zombie engagement eliminates threat. Doctor→Survivor interaction restores health.</p>
-                    <p><strong>Agent-to-Environment:</strong> Safe zones reduce infection probability by 80%. Buildings block movement. Hospitals enable healing. Supply depots replenish resources.</p>
-                </div>
-                <div class="theory-section">
-                    <h3>5. State Transitions</h3>
-                    <p>Survivors: <strong>Healthy → Infected → (Zombie | Dead)</strong>. Infection has a delay period (~300–600 ticks). During this window, doctors can potentially save the survivor. The cure system (when enabled) allows limited doses.</p>
-                </div>
-                <div class="theory-section">
-                    <h3>6. Emergent Behavior</h3>
-                    <p>Complex global patterns emerge from simple local rules. No single agent controls the outcome:</p>
-                    <ul>
-                        <li>A small outbreak can cascade exponentially if survivors cluster.</li>
-                        <li>Strategic police placement creates containment perimeters.</li>
-                        <li>Safe zones can become overwhelmed if too many survivors converge.</li>
-                        <li>Resource scarcity forces trade-offs between fleeing and gathering.</li>
-                    </ul>
-                    <p><em>Example: With 5 zombies, 60 survivors, and no police, infection spreads rapidly. Add 10 police, and the same scenario may result in full containment — demonstrating how a single parameter produces dramatically different emergent outcomes.</em></p>
-                </div>
-                <div class="theory-section">
-                    <h3>7. Simulation Time Steps</h3>
-                    <p>The simulation advances in discrete ticks (~60/sec at 1x). Each tick: (1) agents perceive surroundings, (2) evaluate rules, (3) execute movement, (4) apply state transitions, (5) collect statistics. Fixed random seeds enable reproducible experiments.</p>
+                    <h3>3. Emergent Phenomenon: Phase Transitions</h3>
+                    <p>Small variations in initial parameters (e.g., number of police officers or density of safe zones) produce non-linear bifurcations: either total epidemic burn-through or complete containment.</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- COMPARISON MODAL -->
+    <!-- COMPARISON EXPERIMENT MODAL -->
     <div id="modal-compare" class="modal hidden">
         <div class="modal-content modal-wide">
             <button class="modal-close" id="close-compare">&times;</button>
-            <h2>⚗️ Experiment Comparison Mode</h2>
-            <p class="compare-desc">Run two simulations with different parameters and compare outcomes side by side. Each experiment runs for 1500 ticks (~25 seconds).</p>
+            <h2>⚗️ Comparative Experimentation Lab</h2>
+            <p class="compare-desc">Execute parallel simulations with identical pseudo-random seeds across 1,500 ticks to measure intervention impacts scientifically.</p>
             <div class="compare-presets">
-                <button class="btn btn-preset" data-compare="police">👮 Low vs High Police</button>
-                <button class="btn btn-preset" data-compare="safezones">🏕 Few vs Many Safe Zones</button>
-                <button class="btn btn-preset" data-compare="infection">🦠 High vs Low Infection</button>
-                <button class="btn btn-preset" data-compare="cure">💊 Cure Off vs Cure On</button>
+                <button class="btn btn-preset" data-compare="police">👮 Low vs High Police Force</button>
+                <button class="btn btn-preset" data-compare="safezones">🏕 Fortified Safe Zones vs Open City</button>
+                <button class="btn btn-preset" data-compare="infection">🦠 Virulence: 15% vs 75%</button>
+                <button class="btn btn-preset" data-compare="cure">💊 Vaccine Deployed vs No Cure</button>
             </div>
             <div id="compare-status" class="compare-status"></div>
             <div id="compare-results" class="compare-grid hidden">
@@ -273,6 +325,7 @@
         </div>
     </div>
 
+    <!-- APPLICATION SCRIPTS -->
     <script src="js/world.js"></script>
     <script src="js/agents.js"></script>
     <script src="js/simulation.js"></script>
